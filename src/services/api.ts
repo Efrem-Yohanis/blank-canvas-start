@@ -67,20 +67,40 @@ export async function apiClient<T>(
 }
 
 // ───────────────────────── Auth ─────────────────────────
+export type DjangoLoginRes = {
+  status: "success";
+  data: {
+    access_token: string;
+    token_type: string;
+    expires_at: string;
+    user_id: number;
+    username: string;
+    is_admin: boolean;
+  };
+};
+
+export type DjangoRegisterRes = {
+  status: "success";
+  message: string;
+  data: {
+    id: number;
+    username: string;
+    email: string;
+  };
+};
+
 export const authService = {
   register: (email: string, password: string, username: string) =>
-    apiClient<{ success: boolean; token: string; user: { id: number; username: string; email: string } }>(
-      "/api/auth/register",
-      "POST",
-      { email, password, username }
-    ),
+    apiClient<DjangoRegisterRes>("/api/auth/register", "POST", {
+      email,
+      password,
+      username,
+    }),
   login: (email: string, password: string) =>
-    apiClient<{ success: boolean; token: string; user: { id: number; username: string; email: string } }>(
-      "/api/auth/login",
-      "POST",
-      // Backend requires `username` (accepts email or username value).
-      { username: email, email, password }
-    ),
+    apiClient<DjangoLoginRes>("/api/auth/login", "POST", {
+      username_or_email: email,
+      password,
+    }),
   googleLoginUrl: (redirectUri: string) =>
     `${API_BASE_URL}/api/auth/google/login?redirect_uri=${encodeURIComponent(redirectUri)}`,
 };
