@@ -74,7 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch {}
     setUser(null);
     setToken(null);
     localStorage.removeItem("bible.user");
