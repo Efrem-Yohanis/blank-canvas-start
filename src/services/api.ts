@@ -106,6 +106,8 @@ export const authService = {
       username_or_email: email,
       password,
     }),
+  logout: () =>
+    apiClient<{ status: string; message: string }>("/api/auth/logout", "POST"),
   googleLoginUrl: (redirectUri: string) =>
     `${API_BASE_URL}/api/auth/google/login?redirect_uri=${encodeURIComponent(redirectUri)}`,
 };
