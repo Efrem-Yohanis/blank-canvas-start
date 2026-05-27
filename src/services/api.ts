@@ -58,29 +58,56 @@ export async function apiClient<T>(
     }
   }
 
-  if (!response.ok) {
-    const message =
-      (data as any)?.message || (data as any)?.error || `HTTP ${response.status}`;
-    throw new ApiError(message, response.status, data);
+  if (!response.ok || (data as any)?.status === "error") {
+    const raw = data as any;
+    let message = raw?.message || raw?.error;
+    // Django validation errors: { errors: { field: ["msg"] } }
+    if (!message && raw?.errors) {
+      const firstField = Object.values(raw.errors)[0] as any;
+      message = Array.isArray(firstField) ? firstField[0] : String(firstField);
+    }
+    throw new ApiError(message || `HTTP ${response.status}`, response.status, data);
   }
   return data as T;
 }
 
 // ───────────────────────── Auth ─────────────────────────
+export type DjangoLoginRes = {
+  status: "success";
+  data: {
+    access_token: string;
+    token_type: string;
+    expires_at: string;
+    user_id: number;
+    username: string;
+    is_admin: boolean;
+  };
+};
+
+export type DjangoRegisterRes = {
+  status: "success";
+  message: string;
+  data: {
+    id: number;
+    username: string;
+    email: string;
+  };
+};
+
 export const authService = {
   register: (email: string, password: string, username: string) =>
-    apiClient<{ success: boolean; token: string; user: { id: number; username: string; email: string } }>(
-      "/api/auth/register",
-      "POST",
-      { email, password, username }
-    ),
+    apiClient<DjangoRegisterRes>("/api/auth/register", "POST", {
+      email,
+      password,
+      username,
+    }),
   login: (email: string, password: string) =>
-    apiClient<{ success: boolean; token: string; user: { id: number; username: string; email: string } }>(
-      "/api/auth/login",
-      "POST",
-      // Backend requires `username` (accepts email or username value).
-      { username: email, email, password }
-    ),
+    apiClient<DjangoLoginRes>("/api/auth/login", "POST", {
+      username_or_email: email,
+      password,
+    }),
+  logout: () =>
+    apiClient<{ status: string; message: string }>("/api/auth/logout", "POST"),
   googleLoginUrl: (redirectUri: string) =>
     `${API_BASE_URL}/api/auth/google/login?redirect_uri=${encodeURIComponent(redirectUri)}`,
 };

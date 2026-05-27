@@ -50,11 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const res = await authService.login(email, password);
-    setToken(res.token);
+    setToken(res.data.access_token);
     const u: User = {
-      name: res.user?.username || email.split("@")[0],
-      email: res.user?.email || email,
-      role: deriveRole(res.user, email),
+      name: res.data?.username || email.split("@")[0],
+      email: email,
+      role: deriveRole({ is_admin: res.data?.is_admin }, email),
     };
     persist(u);
     return u;
@@ -62,17 +62,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (username: string, email: string, password: string) => {
     const res = await authService.register(email, password, username);
-    setToken(res.token);
+    // Django register doesn't return a token; auto-login after registration
+    const loginRes = await authService.login(email, password);
+    setToken(loginRes.data.access_token);
     const u: User = {
-      name: res.user?.username || username,
-      email: res.user?.email || email,
-      role: deriveRole(res.user, email),
+      name: loginRes.data?.username || username,
+      email: email,
+      role: deriveRole({ is_admin: loginRes.data?.is_admin }, email),
     };
     persist(u);
     return u;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch {}
     setUser(null);
     setToken(null);
     localStorage.removeItem("bible.user");
