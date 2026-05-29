@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { authService, setToken } from "@/services/api";
 
 export const Route = createFileRoute("/auth/google-callback")({
   head: () => ({ meta: [{ title: "Signing you in — Scripture" }] }),
@@ -18,17 +19,38 @@ function GoogleCallbackPage() {
     const run = async () => {
       try {
         const url = new URL(window.location.href);
-        const token =
+        const err = url.searchParams.get("error");
+        if (err) throw new Error(err);
+
+        const code = url.searchParams.get("code");
+        // Backend may also redirect with an access_token directly
+        const directToken =
           url.searchParams.get("access_token") ||
           url.searchParams.get("token") ||
           new URLSearchParams(url.hash.replace(/^#/, "")).get("access_token");
-        const err = url.searchParams.get("error");
-        if (err) throw new Error(err);
-        if (!token) throw new Error("Missing access token");
 
-        const u = await loginWithToken(token);
-        toast.success("Signed in with Google");
-        navigate({ to: u.role === "admin" ? "/admin" : "/" });
+        if (code) {
+          const res = await authService.googleCallback(code);
+          setToken(res.data.access_token);
+          if (res.data.refresh_token) {
+            try {
+              localStorage.setItem("bible.refresh_token", res.data.refresh_token);
+            } catch {}
+          }
+          const u = await loginWithToken(res.data.access_token);
+          toast.success("Signed in with Google");
+          navigate({ to: u.role === "admin" ? "/admin" : "/" });
+          return;
+        }
+
+        if (directToken) {
+          const u = await loginWithToken(directToken);
+          toast.success("Signed in with Google");
+          navigate({ to: u.role === "admin" ? "/admin" : "/" });
+          return;
+        }
+
+        throw new Error("Missing authorization code");
       } catch (e: any) {
         setError(e?.message || "Google login failed. Please try again.");
       }
