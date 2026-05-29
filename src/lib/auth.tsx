@@ -34,6 +34,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (u) setUser(JSON.parse(u));
       if (r) setResults(JSON.parse(r));
     } catch {}
+
+    // Handle Google OAuth redirect: backend returns to the frontend with
+    // ?access_token=...&refresh_token=...&user_id=...&username=...&email=...
+    try {
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      const accessToken = params.get("access_token");
+      if (accessToken) {
+        setToken(accessToken);
+        const refresh = params.get("refresh_token");
+        if (refresh) localStorage.setItem("bible.refresh_token", refresh);
+        const email = params.get("email") || "";
+        const username = params.get("username") || email.split("@")[0] || "User";
+        const isAdmin = params.get("is_admin") === "true";
+        const u: User = {
+          name: username,
+          email,
+          role: isAdmin || email.toLowerCase().startsWith("admin") ? "admin" : "user",
+        };
+        setUser(u);
+        localStorage.setItem("bible.user", JSON.stringify(u));
+        // Strip OAuth params from the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    } catch {}
   }, []);
 
   const deriveRole = (raw: any, email: string): "admin" | "user" => {
