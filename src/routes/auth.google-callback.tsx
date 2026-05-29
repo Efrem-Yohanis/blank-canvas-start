@@ -22,13 +22,28 @@ function GoogleCallbackPage() {
         const err = url.searchParams.get("error");
         if (err) throw new Error(err);
 
-        const code = url.searchParams.get("code");
-        // Backend may also redirect with an access_token directly
+        // Backend may redirect with tokens directly as URL params
         const directToken =
           url.searchParams.get("access_token") ||
           url.searchParams.get("token") ||
           new URLSearchParams(url.hash.replace(/^#/, "")).get("access_token");
 
+        if (directToken) {
+          const refresh = url.searchParams.get("refresh_token");
+          if (refresh) {
+            try {
+              localStorage.setItem("bible.refresh_token", refresh);
+            } catch {}
+          }
+          setToken(directToken);
+          const u = await loginWithToken(directToken);
+          toast.success("Signed in with Google");
+          navigate({ to: u.role === "admin" ? "/admin" : "/" });
+          return;
+        }
+
+        // Or backend may redirect with a ?code to exchange
+        const code = url.searchParams.get("code");
         if (code) {
           const res = await authService.googleCallback(code);
           setToken(res.data.access_token);
@@ -43,14 +58,7 @@ function GoogleCallbackPage() {
           return;
         }
 
-        if (directToken) {
-          const u = await loginWithToken(directToken);
-          toast.success("Signed in with Google");
-          navigate({ to: u.role === "admin" ? "/admin" : "/" });
-          return;
-        }
-
-        throw new Error("Missing authorization code");
+        throw new Error("Missing authorization code or access token");
       } catch (e: any) {
         setError(e?.message || "Google login failed. Please try again.");
       }
