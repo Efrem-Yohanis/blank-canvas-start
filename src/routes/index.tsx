@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Loader2, BookOpen, ArrowRight, TextSearch } from "lucide-react";
+import { Search, Loader2, BookOpen, ArrowRight, TextSearch, Volume2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { VerseOfTheDay } from "@/components/VerseOfTheDay";
@@ -8,7 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { bibleService } from "@/services/api";
 import { bookSlug, localizedBookName } from "@/data/bible";
 
-type ApiBook = { id: number; name: string; testament: "Old" | "New"; chapters: number };
+type ApiBook = { id: number; name: string; testament: "Old" | "New"; chapters: number; has_audio?: boolean; bible_order?: number };
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,7 +31,10 @@ function Index() {
     retry: 1,
   });
 
-  const books: ApiBook[] = booksQ.data?.books ?? [];
+  const books: ApiBook[] = useMemo(() => {
+    const list = booksQ.data?.books ?? [];
+    return [...list].sort((a, b) => (a.bible_order ?? a.id) - (b.bible_order ?? b.id));
+  }, [booksQ.data]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -48,7 +51,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="mx-auto w-[90%] py-10">
         <VerseOfTheDay />
         <section className="mb-8 text-center">
           <p className="text-sm font-medium uppercase tracking-wider text-primary">
@@ -134,7 +137,12 @@ function BookCard({ index, book, lang }: { index: number; book: ApiBook; lang: s
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs font-semibold text-primary/70">#{index + 1}</div>
-          <h3 className="font-serif text-xl font-semibold text-card-foreground">{localized}</h3>
+          <h3 className="font-serif text-xl font-semibold text-card-foreground inline-flex items-center gap-1.5">
+            {localized}
+            {book.has_audio && (
+              <Volume2 className="h-4 w-4 text-primary" aria-label="Audio available" />
+            )}
+          </h3>
           {localized !== book.name && (
             <p className="text-xs text-muted-foreground">{book.name}</p>
           )}

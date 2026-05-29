@@ -47,7 +47,7 @@ function ReadPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="border-b border-border bg-card/50">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+        <div className="flex max-w-none items-center justify-between px-4 py-3">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> {t.backToBooks}
           </Link>
@@ -56,7 +56,7 @@ function ReadPage() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="mx-auto w-[90%] py-8">
         <header className="mb-6">
           <p className="text-sm uppercase tracking-wider text-muted-foreground">{lang}</p>
           <h2 className="font-serif text-3xl font-semibold text-foreground">{localized}</h2>

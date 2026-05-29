@@ -16,7 +16,7 @@ function AccountPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="mx-auto max-w-3xl px-4 py-10">
+      <main className="mx-auto w-[90%] py-10">
         <section className="mb-8 rounded-2xl border border-border bg-card p-6">
           <p className="text-sm uppercase tracking-wider text-muted-foreground">Account</p>
           <h1 className="mt-1 font-serif text-3xl font-semibold text-foreground">{user.name}</h1>

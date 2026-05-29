@@ -18,6 +18,14 @@ export const Route = createFileRoute("/quiz/$book")({
   component: QuizPage,
 });
 
+type FinalScore = {
+  total_questions: number;
+  correct_answers: number;
+  incorrect_answers: number;
+  score_percentage: number;
+  time_taken?: string;
+};
+
 function QuizPage() {
   const { book: slug } = Route.useParams();
   const { book_id, level_id, language_id } = Route.useSearch();
@@ -34,16 +42,11 @@ function QuizPage() {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [picked, setPicked] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<AnswerResult | null>(null);
-  const [finalScore, setFinalScore] = useState<{
-    score_percentage: number;
-    correct_answers: number;
-    wrong_answers: number;
-    total_questions: number;
-  } | null>(null);
+  const [finalScore, setFinalScore] = useState<FinalScore | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Start quiz on mount
+  // Start quiz on mount — start now returns the first question directly
   useEffect(() => {
     if (!user) return;
     if (!book_id || !level_id || !language_id) {
@@ -57,9 +60,14 @@ function QuizPage() {
         setLoading(true);
         const res = await quizService.start(book_id, level_id, language_id);
         if (cancelled) return;
-        setAttemptId(res.data.attempt_id);
-        setProgress({ current: 0, total: res.data.total_questions });
-        await loadNext(res.data.attempt_id);
+        const d = res.data;
+        setAttemptId(d.attempt_id);
+        if (d.first_question) {
+          setQuestion(d.first_question);
+          setProgress({ current: 1, total: d.total_questions });
+        } else {
+          await loadNext(d.attempt_id);
+        }
       } catch (e) {
         if (!cancelled) setError((e as Error).message);
       } finally {
@@ -72,27 +80,24 @@ function QuizPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [book_id, level_id, language_id, user?.email]);
 
+  const finishQuiz = async (id: number) => {
+    const fin = await quizService.finish(id);
+    setFinalScore(fin.data.results);
+    setQuestion(null);
+  };
+
   const loadNext = async (id: number) => {
     setPicked(null);
     setFeedback(null);
     const res = await quizService.next(id);
-    const d = res.data as
-      | { attempt_id: number; question_number: number; remaining_questions: number; question: QuizQuestion }
-      | { completed: true; message: string };
-    if ("completed" in d) {
-      const fin = await quizService.finish(id);
-      setFinalScore({
-        score_percentage: fin.data.score_percentage,
-        correct_answers: fin.data.correct_answers,
-        wrong_answers: fin.data.wrong_answers,
-        total_questions: fin.data.total_questions,
-      });
-      setQuestion(null);
-    } else {
+    const d = res.data;
+    if ("completed" in d && d.completed) {
+      await finishQuiz(id);
+    } else if ("question" in d) {
       setQuestion(d.question);
       setProgress({
         current: d.question_number,
-        total: d.question_number + d.remaining_questions,
+        total: d.total_questions,
       });
     }
   };
@@ -103,10 +108,6 @@ function QuizPage() {
       setLoading(true);
       const res = await quizService.answer(attemptId, question.question_id, picked);
       setFeedback(res.data);
-      if (res.data.quiz_completed && res.data.final_score) {
-        setFinalScore(res.data.final_score);
-        setQuestion(null);
-      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -125,6 +126,9 @@ function QuizPage() {
       setLoading(false);
     }
   };
+
+  const isLastQuestion =
+    progress.total > 0 && progress.current >= progress.total;
 
   if (!user) {
     return (
@@ -147,7 +151,7 @@ function QuizPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="border-b border-border bg-card/50">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+        <div className="flex max-w-none items-center justify-between px-4 py-3">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Home
           </Link>
@@ -158,7 +162,7 @@ function QuizPage() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="mx-auto w-[90%] py-8">
         {error && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             {error}
@@ -179,6 +183,11 @@ function QuizPage() {
             <p className="mt-2 text-lg text-primary">
               {finalScore.score_percentage.toFixed(0)}%
             </p>
+            {finalScore.time_taken && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Time: {finalScore.time_taken}
+              </p>
+            )}
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <button
                 onClick={() =>
@@ -210,9 +219,11 @@ function QuizPage() {
           </div>
         ) : question ? (
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <div className="mb-4 text-xs font-medium text-muted-foreground">
-              {question.verse_reference}
-            </div>
+            {question.verse_reference && (
+              <div className="mb-4 text-xs font-medium text-muted-foreground">
+                {question.verse_reference}
+              </div>
+            )}
             <h2 className="mb-6 font-serif text-xl font-semibold text-card-foreground">
               {question.text}
             </h2>
@@ -267,7 +278,7 @@ function QuizPage() {
                   onClick={next}
                   className="rounded-full bg-primary px-6 py-2 text-sm font-medium text-primary-foreground"
                 >
-                  {feedback.quiz_completed ? "See Result" : "Next"}
+                  {isLastQuestion ? "See Result" : "Next"}
                 </button>
               ) : (
                 <button

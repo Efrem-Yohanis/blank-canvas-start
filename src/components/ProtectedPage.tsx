@@ -3,7 +3,7 @@ import { type ReactNode } from "react";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/lib/auth";
 
-export function ProtectedPage({ children, max = "max-w-5xl" }: { children: ReactNode; max?: string }) {
+export function ProtectedPage({ children, max = "max-w-none" }: { children: ReactNode; max?: string }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" />;
   return (

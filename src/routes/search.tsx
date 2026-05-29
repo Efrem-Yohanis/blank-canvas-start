@@ -39,7 +39,7 @@ function SearchPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="mx-auto max-w-4xl px-4 py-10">
+      <main className="mx-auto w-[90%] py-10">
         <Link to="/" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Home
         </Link>

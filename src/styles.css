@@ -133,13 +133,23 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+:root {
+  --app-font-scale: 1;
+  --app-font-family: "Source Serif Pro", Georgia, serif;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
   }
 
+  html {
+    font-size: calc(16px * var(--app-font-scale));
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--app-font-family);
   }
 }

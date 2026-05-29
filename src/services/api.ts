@@ -208,39 +208,23 @@ export type QuizBook = {
   levels: { level_id: number; name: string; question_count: number }[];
 };
 
+/** Options come from the API as {A,B,C,D}; we normalize to array form */
+export type QuizQuestionOption = { label: string; text: string };
+
 export type QuizQuestion = {
   question_id: number;
   text: string;
   verse_reference: string;
-  options: { label: string; text: string }[];
-};
-
-export type QuizAttempt = {
-  attempt_id: number;
-  book_id: number;
-  level_id: number;
-  language_id: number;
-  total_questions: number;
-  current_question_number: number;
-  status: string;
+  options: QuizQuestionOption[];
 };
 
 export type AnswerResult = {
   is_correct: boolean;
-  selected_option: string;
   correct_option: { label: string; text: string };
   verse_reference?: string;
   verse_text?: string;
   explanation?: string;
-  progress: { current: number; total: number; remaining: number };
-  next_available: boolean;
-  quiz_completed?: boolean;
-  final_score?: {
-    score_percentage: number;
-    correct_answers: number;
-    wrong_answers: number;
-    total_questions: number;
-  };
+  progress: { answered: number; total: number; remaining: number };
 };
 
 export type QuizLevel = {
@@ -250,7 +234,80 @@ export type QuizLevel = {
   description: string;
   color: string;
   icon: string;
+  total_questions?: number;
 };
+
+export type QuizStartResult = {
+  attempt_id: number;
+  book: { id: number; name: string };
+  level: { id: number; name: string };
+  total_questions: number;
+  first_question: QuizQuestion;
+  started_at?: string;
+};
+
+export type QuizNextResult =
+  | {
+      attempt_id: number;
+      question_number: number;
+      total_questions: number;
+      remaining_questions: number;
+      question: QuizQuestion;
+    }
+  | { completed: true; message: string; review_url?: string };
+
+export type QuizFinishResult = {
+  attempt_id: number;
+  results: {
+    total_questions: number;
+    correct_answers: number;
+    incorrect_answers: number;
+    score_percentage: number;
+    time_taken?: string;
+  };
+};
+
+export type QuizReviewResult = {
+  attempt_id: number;
+  summary: {
+    total: number;
+    correct: number;
+    incorrect: number;
+    score: number;
+  };
+  answers: {
+    question_number: number;
+    question_text: string;
+    user_answer: string;
+    correct_answer: string;
+    correct_answer_text?: string;
+    is_correct: boolean;
+    explanation?: string;
+    verse_reference?: string;
+  }[];
+};
+
+// Normalize options shape: API may return either {A:"...",B:"..."} or [{label,text}]
+function normalizeOptions(opts: unknown): QuizQuestionOption[] {
+  if (!opts) return [];
+  if (Array.isArray(opts)) return opts as QuizQuestionOption[];
+  if (typeof opts === "object") {
+    return Object.entries(opts as Record<string, string>).map(([label, text]) => ({
+      label,
+      text,
+    }));
+  }
+  return [];
+}
+
+function normalizeQuestion(q: any): QuizQuestion {
+  return {
+    question_id: q.question_id ?? q.id,
+    text: q.text,
+    verse_reference: q.verse_reference ?? "",
+    options: normalizeOptions(q.options),
+  };
+}
 
 export const quizService = {
   getLanguages: () =>
@@ -259,74 +316,100 @@ export const quizService = {
   getBooks: () =>
     apiClient<{ success: boolean; data: QuizBook[] }>("/api/quiz/books"),
 
-  getLevels: (book_id: number) =>
-    apiClient<{
+  getLevels: async (book_id: number) => {
+    const res = await apiClient<{
       success: boolean;
-      data: { book_id: number; book_name: string; levels: QuizLevel[] };
-    }>(`/api/quiz/books/${book_id}/levels`),
+      data: { book_id: number; book_name: string; levels: any[] };
+    }>(`/api/quiz/books/${book_id}/levels`);
+    // Normalize: spec uses {id, name, total_questions}; existing UI uses level_id/level_number/...
+    const levels: QuizLevel[] = (res.data?.levels ?? []).map((l: any, i: number) => ({
+      level_id: l.level_id ?? l.id,
+      level_number: l.level_number ?? l.id ?? i + 1,
+      name: l.name,
+      description: l.description ?? `${l.total_questions ?? l.question_count ?? ""} questions`,
+      color: l.color ?? ["#10b981", "#f59e0b", "#ef4444"][i % 3],
+      icon: l.icon ?? ["🌱", "⚡", "🔥"][i % 3],
+      total_questions: l.total_questions ?? l.question_count,
+    }));
+    return { success: res.success, data: { ...res.data, levels } };
+  },
 
-  start: (book_id: number, level_id: number, language_id: number) =>
-    apiClient<{ success: boolean; data: QuizAttempt }>(
-      "/api/quiz/quiz/start",
+  start: async (book_id: number, level_id: number, language_id: number) => {
+    const res = await apiClient<{ success: boolean; data: any }>(
+      "/api/quiz/start",
       "POST",
       { book_id, level_id, language_id }
-    ),
+    );
+    const d = res.data ?? {};
+    const result: QuizStartResult = {
+      attempt_id: d.attempt_id,
+      book: d.book ?? { id: book_id, name: "" },
+      level: d.level ?? { id: level_id, name: "" },
+      total_questions: d.total_questions,
+      first_question: d.first_question ? normalizeQuestion(d.first_question) : (undefined as any),
+      started_at: d.started_at,
+    };
+    return { success: res.success, data: result };
+  },
 
-  next: (attempt_id: number) =>
-    apiClient<{
-      success: boolean;
-      data:
-        | {
-            attempt_id: number;
-            question_number: number;
-            remaining_questions: number;
-            question: QuizQuestion;
-          }
-        | { completed: true; message: string };
-    }>(`/api/quiz/quiz/${attempt_id}/next`),
+  next: async (attempt_id: number) => {
+    const res = await apiClient<{ success: boolean; data: any }>(
+      `/api/quiz/${attempt_id}/next`
+    );
+    const d = res.data ?? {};
+    let data: QuizNextResult;
+    if (d.completed) {
+      data = { completed: true, message: d.message ?? "", review_url: d.review_url };
+    } else {
+      const total = d.total_questions ?? (d.progress?.answered ?? 0) + (d.progress?.remaining ?? 0);
+      data = {
+        attempt_id: d.attempt_id ?? attempt_id,
+        question_number: d.question_number,
+        total_questions: total,
+        remaining_questions: d.progress?.remaining ?? Math.max(0, total - d.question_number),
+        question: normalizeQuestion(d.question),
+      };
+    }
+    return { success: res.success, data };
+  },
 
-  answer: (attempt_id: number, question_id: number, selected_option: string) =>
-    apiClient<{ success: boolean; data: AnswerResult }>(
-      "/api/quiz/quiz/answer",
+  answer: async (
+    attempt_id: number,
+    question_id: number,
+    selected_option: string
+  ) => {
+    const res = await apiClient<{ success: boolean; data: any }>(
+      "/api/quiz/answer",
       "POST",
       { attempt_id, question_id, selected_option }
-    ),
+    );
+    const d = res.data ?? {};
+    // correct_option may be a string letter; wrap to {label,text}
+    const correct =
+      typeof d.correct_option === "string"
+        ? { label: d.correct_option, text: "" }
+        : d.correct_option ?? { label: "", text: "" };
+    const data: AnswerResult = {
+      is_correct: !!d.is_correct,
+      correct_option: correct,
+      verse_reference: d.verse_reference,
+      verse_text: d.verse_text,
+      explanation: d.explanation,
+      progress: d.progress ?? { answered: 0, total: 0, remaining: 0 },
+    };
+    return { success: res.success, data };
+  },
 
   finish: (attempt_id: number) =>
-    apiClient<{
-      success: boolean;
-      data: {
-        attempt_id: number;
-        score_percentage: number;
-        correct_answers: number;
-        wrong_answers: number;
-        total_questions: number;
-        status: string;
-      };
-    }>(`/api/quiz/quiz/${attempt_id}/finish`, "POST"),
+    apiClient<{ success: boolean; data: QuizFinishResult }>(
+      `/api/quiz/${attempt_id}/finish`,
+      "POST"
+    ),
 
   review: (attempt_id: number) =>
-    apiClient<{
-      success: boolean;
-      data: {
-        attempt_id: number;
-        summary: {
-          score_percentage: number;
-          correct_answers: number;
-          wrong_answers: number;
-          total_questions: number;
-        };
-        questions: {
-          question_id: number;
-          question: string;
-          selected_option: string;
-          correct_option: string;
-          is_correct: boolean;
-          verse_reference: string;
-          explanation: string;
-        }[];
-      };
-    }>(`/api/quiz/quiz/${attempt_id}/review`),
+    apiClient<{ success: boolean; data: QuizReviewResult }>(
+      `/api/quiz/${attempt_id}/review`
+    ),
 };
 
 // ───────────────────────── Bible (existing) ─────────────────────────
@@ -355,9 +438,34 @@ export type VerseResponse = {
   language: string;
   status: string;
 };
+export type FullBookChapter = {
+  chapter: number;
+  verses: BibleVerse[];
+  has_audio?: boolean;
+  audio_url?: string | null;
+  audio_duration?: number | null;
+};
 export type FullBookResponse = {
   book: string;
-  chapters: { chapter: number; verses: BibleVerse[] }[];
+  book_id?: number;
+  language?: string;
+  has_audio?: boolean;
+  audio_info?: {
+    has_audio: boolean;
+    type?: string;
+    book_audio_url?: string | null;
+    book_duration?: number | null;
+    chapters_with_audio?: number;
+  };
+  chapters: FullBookChapter[];
+};
+
+export type AudioProgress = {
+  completed_chapters: number[];
+  current_chapter: number;
+  next_chapter?: number;
+  book_completed: boolean;
+  progress_percentage: number;
 };
 
 export const removeDuplicateVerses = (verses: BibleVerse[]): BibleVerse[] => {
@@ -390,9 +498,16 @@ export const bibleService = {
     }>(`/api/bible/search?q=${encodeURIComponent(q)}&language=${encodeURIComponent(lang)}&limit=${limit}`),
 
   getBooksByLanguage: (lang: string) =>
-    apiClient<{ books: { id: number; name: string; testament: "Old" | "New"; chapters: number }[] }>(
-      `/api/bible/books/by-language?language=${encodeURIComponent(lang)}`
-    ),
+    apiClient<{
+      books: {
+        id: number;
+        name: string;
+        testament: "Old" | "New";
+        chapters: number;
+        has_audio?: boolean;
+        bible_order?: number;
+      }[];
+    }>(`/api/bible/books/by-language?language=${encodeURIComponent(lang)}`),
 
   getBooks: (testament: Testament, lang: string) =>
     apiClient<GetBooksResponse>(
@@ -432,4 +547,17 @@ export const bibleService = {
       })),
     };
   },
+};
+
+// ───────────────────────── Audio Progress ─────────────────────────
+export const audioService = {
+  getProgress: (book_id: number) =>
+    apiClient<{ status: string; data: AudioProgress }>(
+      `/api/user/audio/progress/${book_id}`
+    ),
+  recordCompletion: (book_id: number, chapter: number, lang: string) =>
+    apiClient<{ status: string; data: AudioProgress }>(
+      `/api/audio/record/${book_id}/${chapter}?language=${encodeURIComponent(lang)}`,
+      "POST"
+    ),
 };

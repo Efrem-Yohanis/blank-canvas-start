@@ -27,6 +27,7 @@ import { Route as ProfileEditRouteImport } from './routes/profile.edit'
 import { Route as ProfileChangePasswordRouteImport } from './routes/profile.change-password'
 import { Route as BookBookRouteImport } from './routes/book.$book'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth.google-callback'
+import { Route as ApiVerseExplainRouteImport } from './routes/api/verse-explain'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminQuestionsImportRouteImport } from './routes/admin.questions-import'
 import { Route as AdminLanguagesRouteImport } from './routes/admin.languages'
@@ -123,6 +124,11 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   path: '/auth/google-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVerseExplainRoute = ApiVerseExplainRouteImport.update({
+  id: '/api/verse-explain',
+  path: '/api/verse-explain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/admin/languages': typeof AdminLanguagesRoute
   '/admin/questions-import': typeof AdminQuestionsImportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/verse-explain': typeof ApiVerseExplainRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/book/$book': typeof BookBookRoute
   '/profile/change-password': typeof ProfileChangePasswordRoute
@@ -189,6 +196,7 @@ export interface FileRoutesByTo {
   '/admin/languages': typeof AdminLanguagesRoute
   '/admin/questions-import': typeof AdminQuestionsImportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/verse-explain': typeof ApiVerseExplainRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/book/$book': typeof BookBookRoute
   '/profile/change-password': typeof ProfileChangePasswordRoute
@@ -215,6 +223,7 @@ export interface FileRoutesById {
   '/admin/languages': typeof AdminLanguagesRoute
   '/admin/questions-import': typeof AdminQuestionsImportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/verse-explain': typeof ApiVerseExplainRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/book/$book': typeof BookBookRoute
   '/profile/change-password': typeof ProfileChangePasswordRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/admin/languages'
     | '/admin/questions-import'
     | '/admin/users'
+    | '/api/verse-explain'
     | '/auth/google-callback'
     | '/book/$book'
     | '/profile/change-password'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/admin/languages'
     | '/admin/questions-import'
     | '/admin/users'
+    | '/api/verse-explain'
     | '/auth/google-callback'
     | '/book/$book'
     | '/profile/change-password'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/admin/languages'
     | '/admin/questions-import'
     | '/admin/users'
+    | '/api/verse-explain'
     | '/auth/google-callback'
     | '/book/$book'
     | '/profile/change-password'
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   ReadingProgressRoute: typeof ReadingProgressRoute
   SearchRoute: typeof SearchRoute
   StatisticsRoute: typeof StatisticsRoute
+  ApiVerseExplainRoute: typeof ApiVerseExplainRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
   BookBookRoute: typeof BookBookRoute
   QuizSetupBookRoute: typeof QuizSetupBookRoute
@@ -447,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/verse-explain': {
+      id: '/api/verse-explain'
+      path: '/api/verse-explain'
+      fullPath: '/api/verse-explain'
+      preLoaderRoute: typeof ApiVerseExplainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/users': {
       id: '/admin/users'
       path: '/users'
@@ -529,6 +549,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReadingProgressRoute: ReadingProgressRoute,
   SearchRoute: SearchRoute,
   StatisticsRoute: StatisticsRoute,
+  ApiVerseExplainRoute: ApiVerseExplainRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
   BookBookRoute: BookBookRoute,
   QuizSetupBookRoute: QuizSetupBookRoute,
@@ -538,13 +559,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

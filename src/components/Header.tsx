@@ -3,6 +3,7 @@ import { BookOpen, User as UserIcon, LogOut, Globe, Check } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n, LANGS } from "@/lib/i18n";
+import { SettingsMenu } from "@/components/SettingsMenu";
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -18,12 +19,13 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+      <div className="flex h-16 max-w-none items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2 font-serif text-lg font-semibold text-foreground">
           <BookOpen className="h-5 w-5 text-primary" />
           {t.appName}
         </Link>
         <div className="flex items-center gap-2">
+          <SettingsMenu />
           <div className="relative">
             <button
               onClick={() => setLangOpen((o) => !o)}
