@@ -108,8 +108,24 @@ export const authService = {
     }),
   logout: () =>
     apiClient<{ status: string; message: string }>("/api/auth/logout", "POST"),
-  googleLoginUrl: (redirectUri: string) =>
-    `${API_BASE_URL}/api/auth/google/login?redirect_uri=${encodeURIComponent(redirectUri)}`,
+  googleRedirectUrl: () => `${API_BASE_URL}/api/auth/google/redirect/`,
+  googleCallback: (code: string) =>
+    apiClient<{
+      status: "success";
+      data: {
+        access_token: string;
+        refresh_token?: string;
+        user: {
+          id: number;
+          username: string;
+          email: string;
+          first_name?: string;
+          last_name?: string;
+          is_admin?: boolean;
+        };
+        is_new_user?: boolean;
+      };
+    }>("/api/auth/google/callback/", "POST", { code }),
 };
 
 // ───────────────────────── User / Profile ─────────────────────────
