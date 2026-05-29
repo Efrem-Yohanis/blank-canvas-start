@@ -20,8 +20,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const handleGoogle = () => {
-    const redirectUri = `${window.location.origin}/auth/google-callback`;
-    window.location.href = authService.googleLoginUrl(redirectUri);
+    window.location.href = authService.googleRedirectUrl();
   };
 
   const onSubmit = async (e: FormEvent) => {
