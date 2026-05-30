@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { BookMarked, Play, PlayCircle, KeyRound, Pencil } from "lucide-react";
+import { BookMarked, Play, PlayCircle, KeyRound, Pencil, Headphones } from "lucide-react";
 import { ProtectedPage, StatCard, SectionCard } from "@/components/ProtectedPage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { userService } from "@/services/api";
+import { bookProgressService, userService } from "@/services/api";
+import { bookSlug } from "@/data/bible";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/profile")({
