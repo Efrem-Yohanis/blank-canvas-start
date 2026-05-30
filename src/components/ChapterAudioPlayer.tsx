@@ -81,6 +81,23 @@ export function ChapterAudioPlayer({
     }
   }, [audioUrl, chapter]);
 
+  // Throttled position sync to backend while playing (every 10s)
+  const lastSyncRef = useRef(0);
+  useEffect(() => {
+    if (!user || !bookId || !playing) return;
+    const id = window.setInterval(() => {
+      const el = audioRef.current;
+      if (!el || el.paused) return;
+      const pos = Math.floor(el.currentTime);
+      if (pos === lastSyncRef.current) return;
+      lastSyncRef.current = pos;
+      audioService
+        .updateProgress(bookId, { chapter_number: chapter, current_position: pos })
+        .catch(() => {});
+    }, 10000);
+    return () => window.clearInterval(id);
+  }, [user, bookId, chapter, playing]);
+
   const toggle = () => {
     const el = audioRef.current;
     if (!el || !audioUrl) return;
