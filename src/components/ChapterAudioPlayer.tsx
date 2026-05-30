@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { recordChapterCompletion } from "@/lib/audio-progress";
+import { audioService } from "@/services/api";
 
 type Props = {
   bookId?: number;
@@ -80,6 +81,23 @@ export function ChapterAudioPlayer({
     }
   }, [audioUrl, chapter]);
 
+  // Throttled position sync to backend while playing (every 10s)
+  const lastSyncRef = useRef(0);
+  useEffect(() => {
+    if (!user || !bookId || !playing) return;
+    const id = window.setInterval(() => {
+      const el = audioRef.current;
+      if (!el || el.paused) return;
+      const pos = Math.floor(el.currentTime);
+      if (pos === lastSyncRef.current) return;
+      lastSyncRef.current = pos;
+      audioService
+        .updateProgress(bookId, { chapter_number: chapter, current_position: pos })
+        .catch(() => {});
+    }, 10000);
+    return () => window.clearInterval(id);
+  }, [user, bookId, chapter, playing]);
+
   const toggle = () => {
     const el = audioRef.current;
     if (!el || !audioUrl) return;
@@ -106,6 +124,11 @@ export function ChapterAudioPlayer({
           language,
           isAuthenticated: !!user,
         });
+        if (user) {
+          audioService
+            .updateProgress(bookId, { chapter_number: chapter, completed_chapter: chapter })
+            .catch(() => {});
+        }
         onCompleted?.(chapter);
       } catch {}
     }
@@ -122,6 +145,14 @@ export function ChapterAudioPlayer({
     setPlaying(false);
     intentRef.current = false;
     writeIntent(false);
+    if (user && bookId && el) {
+      audioService
+        .updateProgress(bookId, {
+          chapter_number: chapter,
+          current_position: Math.floor(el.currentTime),
+        })
+        .catch(() => {});
+    }
   };
   const handleNativePlay = () => {
     setPlaying(true);
