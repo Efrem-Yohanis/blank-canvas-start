@@ -37,6 +37,12 @@ function ProfilePage() {
     queryFn: () => userService.getInProgressQuizzes(),
     enabled: !!user,
   });
+  const bookProgressQ = useQuery({
+    queryKey: ["user", "book-progress"],
+    queryFn: () => bookProgressService.getAll(),
+    enabled: !!user,
+  });
+  const bookProgress = bookProgressQ.data?.data ?? [];
 
   const p: any = profileQ.data?.user;
   const s: any = statsQ.data?.stats ?? {};
