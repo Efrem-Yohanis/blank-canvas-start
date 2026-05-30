@@ -490,11 +490,80 @@ export type FullBookResponse = {
 };
 
 export type AudioProgress = {
-  completed_chapters: number[];
+  book_id?: number;
+  book_name?: string;
+  testament?: Testament;
   current_chapter: number;
+  current_verse?: number;
+  audio_current_position?: number;
+  audio_completed_chapters?: number[];
+  total_audio_duration?: number;
+  listened_audio_duration?: number;
+  remaining_audio_duration?: number;
+  audio_progress_percentage?: number;
+  completed_chapters?: number[];
   next_chapter?: number;
-  book_completed: boolean;
+  book_completed?: boolean;
+  completed?: boolean;
   progress_percentage: number;
+};
+
+export type AudioProgressUpdate = {
+  book_id: number;
+  book_name: string;
+  testament: Testament;
+  success: boolean;
+  current_chapter: number;
+  current_position: number;
+  audio_completed_chapters: number[];
+  audio_progress_percentage: number;
+  total_audio_duration: number;
+  listened_audio_duration: number;
+  remaining_audio_duration: number;
+};
+
+export type QuizProgress = {
+  book_id: number;
+  book_name: string;
+  testament: Testament;
+  total_quizzes_taken: number;
+  completed_quizzes: number;
+  in_progress_attempt_id: number | null;
+  status: "in_progress" | "completed" | "abandoned" | null;
+  total_questions: number;
+  answered_questions: number;
+  correct_answers: number;
+  score_percentage: number;
+  progress_percentage: number;
+  can_resume: boolean;
+  resume_data: { current_question_index?: number; current_index?: number } | null;
+  last_attempt_at: string | null;
+};
+
+export type BookProgressEntry = {
+  book_id: number;
+  book_name: string;
+  testament: Testament;
+  current_chapter: number;
+  current_verse: number;
+  questions_answered: number;
+  correct_answers: number;
+  audio_started: boolean;
+  audio_can_resume: boolean;
+  audio_current_position: number;
+  audio_completed_chapters: number[];
+  audio_progress_percentage: number;
+  total_audio_chapters: number;
+  quiz_in_progress: boolean;
+  quiz_resume_attempt_id: number | null;
+  quiz_resume_status: "in_progress" | "completed" | "abandoned" | null;
+  quiz_resume_total_questions: number;
+  quiz_resume_answered_questions: number;
+  quiz_resume_correct_answers: number;
+  quiz_resume_score_percentage: number;
+  quiz_resume_progress_percentage: number;
+  last_activity: string | null;
+  completed: boolean;
 };
 
 export const removeDuplicateVerses = (verses: BibleVerse[]): BibleVerse[] => {
@@ -584,9 +653,34 @@ export const audioService = {
     apiClient<{ status: string; data: AudioProgress }>(
       `/api/user/audio/progress/${book_id}`
     ),
+  updateProgress: (
+    book_id: number,
+    payload: { chapter_number: number; current_position?: number; completed_chapter?: number }
+  ) =>
+    apiClient<{ status: string; data: AudioProgressUpdate }>(
+      `/api/user/audio/progress/${book_id}/update`,
+      "POST",
+      payload
+    ),
   recordCompletion: (book_id: number, chapter: number, lang: string) =>
     apiClient<{ status: string; data: AudioProgress }>(
       `/api/audio/record/${book_id}/${chapter}?language=${encodeURIComponent(lang)}`,
       "POST"
+    ),
+};
+
+// ───────────────────────── Quiz Progress ─────────────────────────
+export const quizProgressService = {
+  getForBook: (book_id: number) =>
+    apiClient<{ status: string; data: QuizProgress }>(
+      `/api/user/quiz-progress/${book_id}`
+    ),
+};
+
+// ───────────────────────── Combined Book Progress ─────────────────────────
+export const bookProgressService = {
+  getAll: () =>
+    apiClient<{ status: string; data: BookProgressEntry[] }>(
+      `/api/user/book-progress`
     ),
 };
