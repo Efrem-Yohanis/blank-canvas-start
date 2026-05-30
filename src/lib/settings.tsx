@@ -38,7 +38,7 @@ function applyTheme(t: Theme) {
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [fontSize, setFontSizeState] = useState<FontSize>("base");
+  const [fontSize, setFontSizeState] = useState<FontSize>("sm");
   const [fontFamily, setFontFamilyState] = useState<FontFamily>("serif");
   const [theme, setThemeState] = useState<Theme>("light");
 

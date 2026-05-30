@@ -46,7 +46,7 @@ export function Header() {
                       setLang(l.code);
                       setLangOpen(false);
                     }}
-                    className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left text-sm text-popover-foreground hover:bg-secondary"
+                    className="flex w-full items-center justify-center gap-2 px-4 py-2 text-center text-sm text-popover-foreground hover:bg-secondary sm:justify-between sm:text-left"
                   >
                     <span>
                       <span className="font-medium">{l.native}</span>
@@ -79,7 +79,7 @@ export function Header() {
           )}
           {user && open && (
             <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-              <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-popover-foreground hover:bg-secondary">
+              <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-popover-foreground hover:bg-secondary sm:justify-start">
                 <UserIcon className="h-4 w-4" /> Profile
               </Link>
               <button
@@ -87,7 +87,7 @@ export function Header() {
                   setOpen(false);
                   logout();
                 }}
-                className="flex w-full items-center gap-2 border-t border-border px-4 py-2 text-left text-sm text-popover-foreground hover:bg-secondary"
+                className="flex w-full items-center justify-center gap-2 border-t border-border px-4 py-2 text-center text-sm text-popover-foreground hover:bg-secondary sm:justify-start sm:text-left"
               >
                 <LogOut className="h-4 w-4" /> {t.logout}
               </button>

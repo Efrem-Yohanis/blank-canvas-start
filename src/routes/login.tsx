@@ -19,8 +19,13 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleGoogle = () => {
-    window.location.href = authService.googleRedirectUrl();
+  const handleGoogle = async () => {
+    try {
+      const authUrl = await authService.getGoogleAuthUrl();
+      window.location.href = authUrl;
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to initiate Google login");
+    }
   };
 
   const onSubmit = async (e: FormEvent) => {

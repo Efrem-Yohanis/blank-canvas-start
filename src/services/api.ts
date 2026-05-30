@@ -19,6 +19,20 @@ export const setToken = (token: string | null) => {
   } catch {}
 };
 
+/** Dispatched whenever the backend rejects a request with 401. */
+export const SESSION_EXPIRED_EVENT = "bible:session-expired";
+let sessionExpiredDispatched = false;
+function notifySessionExpired() {
+  if (sessionExpiredDispatched) return;
+  sessionExpiredDispatched = true;
+  setTimeout(() => {
+    sessionExpiredDispatched = false;
+  }, 5000);
+  try {
+    window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+  } catch {}
+}
+
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -46,6 +60,11 @@ export async function apiClient<T>(
   });
 
   const data = await response.json().catch(() => null);
+
+  // Auth expired: tell the app so it can log the user out and notify them.
+  if (response.status === 401 && getToken()) {
+    notifySessionExpired();
+  }
 
   // Some endpoints (e.g. /api/auth/login) return HTTP 200 but with an
   // error envelope: `[{status:"error", message, data}, <httpCode>]`.
@@ -108,24 +127,18 @@ export const authService = {
     }),
   logout: () =>
     apiClient<{ status: string; message: string }>("/api/auth/logout", "POST"),
-  googleRedirectUrl: () => `${API_BASE_URL}/api/auth/google/redirect/`,
-  googleCallback: (code: string) =>
-    apiClient<{
-      status: "success";
-      data: {
-        access_token: string;
-        refresh_token?: string;
-        user: {
-          id: number;
-          username: string;
-          email: string;
-          first_name?: string;
-          last_name?: string;
-          is_admin?: boolean;
-        };
-        is_new_user?: boolean;
-      };
-    }>("/api/auth/google/callback/", "POST", { code }),
+  getGoogleAuthUrl: async () => {
+    const res = await apiClient<{
+      status: string;
+      auth_url: string;
+      redirect_uri: string;
+      client_id: string;
+    }>("/api/auth/google/redirect/");
+    if (res.status !== "success" || !res.auth_url) {
+      throw new ApiError("Failed to get Google auth URL", 400, res);
+    }
+    return res.auth_url;
+  },
 };
 
 // ───────────────────────── User / Profile ─────────────────────────

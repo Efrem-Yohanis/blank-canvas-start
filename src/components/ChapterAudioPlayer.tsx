@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Download } from "lucide-react";
-import { audioService } from "@/services/api";
 import { useAuth } from "@/lib/auth";
+import { recordChapterCompletion } from "@/lib/audio-progress";
 
 type Props = {
   bookId?: number;
@@ -97,10 +97,15 @@ export function ChapterAudioPlayer({
 
   const handleEnded = async () => {
     setPlaying(false);
-    if (user && bookId && recordedRef.current !== chapter) {
+    if (bookId && recordedRef.current !== chapter) {
       recordedRef.current = chapter;
       try {
-        await audioService.recordCompletion(bookId, chapter, language);
+        await recordChapterCompletion({
+          bookId,
+          chapter,
+          language,
+          isAuthenticated: !!user,
+        });
         onCompleted?.(chapter);
       } catch {}
     }

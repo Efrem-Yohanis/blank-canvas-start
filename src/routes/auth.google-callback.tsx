@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { authService, setToken } from "@/services/api";
 
 export const Route = createFileRoute("/auth/google-callback")({
   head: () => ({ meta: [{ title: "Signing you in — Scripture" }] }),
@@ -19,46 +18,17 @@ function GoogleCallbackPage() {
     const run = async () => {
       try {
         const url = new URL(window.location.href);
-        const err = url.searchParams.get("error");
-        if (err) throw new Error(err);
-
-        // Backend may redirect with tokens directly as URL params
-        const directToken =
+        const token =
           url.searchParams.get("access_token") ||
           url.searchParams.get("token") ||
           new URLSearchParams(url.hash.replace(/^#/, "")).get("access_token");
+        const err = url.searchParams.get("error");
+        if (err) throw new Error(err);
+        if (!token) throw new Error("Missing access token");
 
-        if (directToken) {
-          const refresh = url.searchParams.get("refresh_token");
-          if (refresh) {
-            try {
-              localStorage.setItem("bible.refresh_token", refresh);
-            } catch {}
-          }
-          setToken(directToken);
-          const u = await loginWithToken(directToken);
-          toast.success("Signed in with Google");
-          navigate({ to: u.role === "admin" ? "/admin" : "/" });
-          return;
-        }
-
-        // Or backend may redirect with a ?code to exchange
-        const code = url.searchParams.get("code");
-        if (code) {
-          const res = await authService.googleCallback(code);
-          setToken(res.data.access_token);
-          if (res.data.refresh_token) {
-            try {
-              localStorage.setItem("bible.refresh_token", res.data.refresh_token);
-            } catch {}
-          }
-          const u = await loginWithToken(res.data.access_token);
-          toast.success("Signed in with Google");
-          navigate({ to: u.role === "admin" ? "/admin" : "/" });
-          return;
-        }
-
-        throw new Error("Missing authorization code or access token");
+        const u = await loginWithToken(token);
+        toast.success("Signed in with Google");
+        navigate({ to: u.role === "admin" ? "/admin" : "/" });
       } catch (e: any) {
         setError(e?.message || "Google login failed. Please try again.");
       }

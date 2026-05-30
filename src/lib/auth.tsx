@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { authService, setToken, userService } from "@/services/api";
+import { toast } from "sonner";
+import { authService, setToken, userService, SESSION_EXPIRED_EVENT } from "@/services/api";
+import { syncPendingProgress } from "@/lib/audio-progress";
 
 export type QuizResult = {
   book: string;
@@ -34,31 +36,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (u) setUser(JSON.parse(u));
       if (r) setResults(JSON.parse(r));
     } catch {}
+  }, []);
 
-    // Handle Google OAuth redirect: backend returns to the frontend with
-    // ?access_token=...&refresh_token=...&user_id=...&username=...&email=...
-    try {
-      if (typeof window === "undefined") return;
-      const params = new URLSearchParams(window.location.search);
-      const accessToken = params.get("access_token");
-      if (accessToken) {
-        setToken(accessToken);
-        const refresh = params.get("refresh_token");
-        if (refresh) localStorage.setItem("bible.refresh_token", refresh);
-        const email = params.get("email") || "";
-        const username = params.get("username") || email.split("@")[0] || "User";
-        const isAdmin = params.get("is_admin") === "true";
-        const u: User = {
-          name: username,
-          email,
-          role: isAdmin || email.toLowerCase().startsWith("admin") ? "admin" : "user",
-        };
-        setUser(u);
-        localStorage.setItem("bible.user", JSON.stringify(u));
-        // Strip OAuth params from the URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    } catch {}
+  // Global handler: backend rejected a call with 401 → session expired.
+  // Log the user out but keep them on whichever page they're on (typically
+  // home) so they can see the login button. Show a popup notification.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onExpired = () => {
+      setUser(null);
+      setToken(null);
+      try {
+        localStorage.removeItem("bible.user");
+      } catch {}
+      toast.error("Your session has expired. Please sign in again.", {
+        duration: 6000,
+      });
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
+
+  // Handle OAuth redirect: backend redirects to /?access_token=...&refresh_token=...&user_id=...
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get("access_token");
+    if (!accessToken) return;
+
+    const username = params.get("username") || params.get("display_name") || "";
+    const email = params.get("email") || "";
+    const isAdmin = params.get("is_admin") === "true";
+
+    setToken(accessToken);
+
+    const u: User = {
+      name: username || email.split("@")[0] || "User",
+      email,
+      role: deriveRole({ is_admin: isAdmin }, email),
+    };
+    persist(u);
+    // Backend (Google) login: flush any anonymous progress collected on this device.
+    syncPendingProgress().catch(() => {});
+
+    // Strip auth params from the URL so tokens aren't left in history/shared links
+    const url = new URL(window.location.href);
+    [
+      "access_token",
+      "refresh_token",
+      "user_id",
+      "username",
+      "email",
+      "display_name",
+      "is_admin",
+      "token_type",
+      "expires_at",
+    ].forEach((k) => url.searchParams.delete(k));
+    window.history.replaceState({}, "", url.pathname + (url.search ? url.search : "") + url.hash);
+
+    // If profile fetch reveals a better username/role, refresh in background
+    userService
+      .getProfile()
+      .then((res) => {
+        const profile: any = res.user;
+        persist({
+          name: profile?.username || u.name,
+          email: profile?.email || u.email,
+          role: deriveRole(profile, profile?.email || u.email),
+        });
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const deriveRole = (raw: any, email: string): "admin" | "user" => {
@@ -82,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: deriveRole({ is_admin: res.data?.is_admin }, email),
     };
     persist(u);
+    syncPendingProgress().catch(() => {});
     return u;
   };
 
@@ -96,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: deriveRole({ is_admin: loginRes.data?.is_admin }, email),
     };
     persist(u);
+    syncPendingProgress().catch(() => {});
     return u;
   };
 
@@ -123,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       u = { name: "User", email: "", role: "user" };
     }
     persist(u);
+    syncPendingProgress().catch(() => {});
     return u;
   };
 
