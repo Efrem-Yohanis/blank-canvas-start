@@ -180,6 +180,111 @@ function ProfilePage() {
         </div>
       </SectionCard>
 
+      {/* Combined book progress (audio + quiz) */}
+      <SectionCard title={`Book progress (${bookProgress.length})`}>
+        {bookProgressQ.isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+        ) : bookProgress.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Listen to a chapter or take a quiz to start tracking progress here.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {bookProgress.map((b) => {
+              const slug = bookSlug(b.book_name);
+              return (
+                <li
+                  key={b.book_id}
+                  className="rounded-xl border border-border p-4"
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {b.book_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.testament} Testament
+                        {b.last_activity
+                          ? ` · Last activity ${new Date(b.last_activity).toLocaleDateString()}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      {b.audio_can_resume && (
+                        <Link
+                          to="/book/$book"
+                          params={{ book: slug }}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary"
+                        >
+                          <Headphones className="h-3.5 w-3.5" /> Resume audio
+                        </Link>
+                      )}
+                      {b.quiz_in_progress ? (
+                        <Link
+                          to="/quiz-setup/$book"
+                          params={{ book: slug }}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+                        >
+                          <PlayCircle className="h-3.5 w-3.5" /> Resume quiz
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/quiz-setup/$book"
+                          params={{ book: slug }}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary"
+                        >
+                          <Play className="h-3.5 w-3.5" /> Take quiz
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <div className="mb-1 flex justify-between text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <Headphones className="h-3 w-3" /> Audio
+                        </span>
+                        <span className="tabular-nums">
+                          {Math.round(b.audio_progress_percentage)}%
+                          {b.total_audio_chapters
+                            ? ` · ${b.audio_completed_chapters?.length ?? 0}/${b.total_audio_chapters} ch`
+                            : ""}
+                        </span>
+                      </div>
+                      <Progress
+                        value={Math.round(b.audio_progress_percentage)}
+                        className="h-1.5"
+                      />
+                    </div>
+                    <div>
+                      <div className="mb-1 flex justify-between text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <PlayCircle className="h-3 w-3" /> Quiz
+                        </span>
+                        <span className="tabular-nums">
+                          {b.quiz_resume_total_questions > 0
+                            ? `${b.quiz_resume_answered_questions}/${b.quiz_resume_total_questions} · ${Math.round(b.quiz_resume_score_percentage)}%`
+                            : "Not started"}
+                        </span>
+                      </div>
+                      <Progress
+                        value={Math.round(b.quiz_resume_progress_percentage)}
+                        className="h-1.5"
+                      />
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SectionCard>
+
+
       {/* In-progress quizzes */}
       <SectionCard title={`In progress quizzes (${quizzes.length})`}>
         {inProgress.isLoading ? (
