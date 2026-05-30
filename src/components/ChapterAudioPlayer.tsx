@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { recordChapterCompletion } from "@/lib/audio-progress";
+import { audioService } from "@/services/api";
 
 type Props = {
   bookId?: number;
