@@ -653,9 +653,34 @@ export const audioService = {
     apiClient<{ status: string; data: AudioProgress }>(
       `/api/user/audio/progress/${book_id}`
     ),
+  updateProgress: (
+    book_id: number,
+    payload: { chapter_number: number; current_position?: number; completed_chapter?: number }
+  ) =>
+    apiClient<{ status: string; data: AudioProgressUpdate }>(
+      `/api/user/audio/progress/${book_id}/update`,
+      "POST",
+      payload
+    ),
   recordCompletion: (book_id: number, chapter: number, lang: string) =>
     apiClient<{ status: string; data: AudioProgress }>(
       `/api/audio/record/${book_id}/${chapter}?language=${encodeURIComponent(lang)}`,
       "POST"
+    ),
+};
+
+// ───────────────────────── Quiz Progress ─────────────────────────
+export const quizProgressService = {
+  getForBook: (book_id: number) =>
+    apiClient<{ status: string; data: QuizProgress }>(
+      `/api/user/quiz-progress/${book_id}`
+    ),
+};
+
+// ───────────────────────── Combined Book Progress ─────────────────────────
+export const bookProgressService = {
+  getAll: () =>
+    apiClient<{ status: string; data: BookProgressEntry[] }>(
+      `/api/user/book-progress`
     ),
 };
