@@ -124,6 +124,11 @@ export function ChapterAudioPlayer({
           language,
           isAuthenticated: !!user,
         });
+        if (user) {
+          audioService
+            .updateProgress(bookId, { chapter_number: chapter, completed_chapter: chapter })
+            .catch(() => {});
+        }
         onCompleted?.(chapter);
       } catch {}
     }
