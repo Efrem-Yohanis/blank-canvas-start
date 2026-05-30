@@ -145,6 +145,14 @@ export function ChapterAudioPlayer({
     setPlaying(false);
     intentRef.current = false;
     writeIntent(false);
+    if (user && bookId && el) {
+      audioService
+        .updateProgress(bookId, {
+          chapter_number: chapter,
+          current_position: Math.floor(el.currentTime),
+        })
+        .catch(() => {});
+    }
   };
   const handleNativePlay = () => {
     setPlaying(true);
