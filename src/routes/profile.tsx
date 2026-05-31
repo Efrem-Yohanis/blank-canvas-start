@@ -418,6 +418,7 @@ function ProfilePage() {
           </div>
         )}
       </SectionCard>
+      </div>
     </ProtectedPage>
   );
 }
