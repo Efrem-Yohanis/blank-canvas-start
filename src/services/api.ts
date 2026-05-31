@@ -127,6 +127,18 @@ export const authService = {
     }),
   logout: () =>
     apiClient<{ status: string; message: string }>("/api/auth/logout", "POST"),
+  forgotPassword: (email: string) =>
+    apiClient<{ status?: string; success?: boolean; message?: string; token?: string; reset_token?: string }>(
+      "/api/auth/forgot-password",
+      "POST",
+      { email }
+    ),
+  resetPassword: (token: string, new_password: string) =>
+    apiClient<{ status?: string; success?: boolean; message?: string }>(
+      "/api/auth/reset-password",
+      "POST",
+      { token, new_password }
+    ),
   getGoogleAuthUrl: async () => {
     const res = await apiClient<{
       status: string;
