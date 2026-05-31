@@ -119,6 +119,13 @@ function LoginPage() {
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {mode === "login" ? "Login" : "Create account"}
           </button>
+          {mode === "login" && (
+            <div className="text-right">
+              <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+          )}
         </form>
         {mode === "register" && (
           <p className="mt-3 text-center text-[11px] text-muted-foreground">

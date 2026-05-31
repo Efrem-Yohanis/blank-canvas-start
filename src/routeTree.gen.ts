@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatisticsRouteImport } from './routes/statistics'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReadingProgressRouteImport } from './routes/reading-progress'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
@@ -43,6 +44,11 @@ const StatisticsRoute = StatisticsRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReadingProgressRoute = ReadingProgressRouteImport.update({
@@ -171,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reading-progress': typeof ReadingProgressRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/admin/bible-import': typeof AdminBibleImportRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reading-progress': typeof ReadingProgressRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/admin/bible-import': typeof AdminBibleImportRoute
@@ -225,6 +233,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reading-progress': typeof ReadingProgressRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/admin/bible-import': typeof AdminBibleImportRoute
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/reading-progress'
+    | '/reset-password'
     | '/search'
     | '/statistics'
     | '/admin/bible-import'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/reading-progress'
+    | '/reset-password'
     | '/search'
     | '/statistics'
     | '/admin/bible-import'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/reading-progress'
+    | '/reset-password'
     | '/search'
     | '/statistics'
     | '/admin/bible-import'
@@ -335,6 +347,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRouteWithChildren
   ReadingProgressRoute: typeof ReadingProgressRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   StatisticsRoute: typeof StatisticsRoute
   ApiVerseExplainRoute: typeof ApiVerseExplainRoute
@@ -359,6 +372,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reading-progress': {
@@ -568,6 +588,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRouteWithChildren,
   ReadingProgressRoute: ReadingProgressRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   StatisticsRoute: StatisticsRoute,
   ApiVerseExplainRoute: ApiVerseExplainRoute,
