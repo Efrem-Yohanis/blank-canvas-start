@@ -43,7 +43,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // home) so they can see the login button. Show a popup notification.
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Track last user interaction (keyboard, pointer, touch, scroll).
+    let lastInteraction = Date.now();
+    const bump = () => {
+      lastInteraction = Date.now();
+    };
+    const events = ["pointerdown", "keydown", "touchstart", "scroll", "mousemove"];
+    events.forEach((e) =>
+      window.addEventListener(e, bump, { passive: true } as AddEventListenerOptions)
+    );
+
+    // Keep session alive while user is active or audio is playing:
+    // only force-logout when the tab has been idle (no interaction for 15min)
+    // AND no audio is currently playing.
+    const IDLE_MS = 15 * 60 * 1000;
     const onExpired = () => {
+      const audioPlaying = !!(window as any).__bibleAudioPlaying;
+      const idle = Date.now() - lastInteraction > IDLE_MS;
+      if (audioPlaying || !idle) {
+        // Stay signed in — the user is actively using the app.
+        return;
+      }
       setUser(null);
       setToken(null);
       try {
@@ -54,7 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
-    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+      events.forEach((e) => window.removeEventListener(e, bump));
+    };
   }, []);
 
   // Handle OAuth redirect: backend redirects to /?access_token=...&refresh_token=...&user_id=...

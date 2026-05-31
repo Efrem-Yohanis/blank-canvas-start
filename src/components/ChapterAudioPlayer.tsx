@@ -57,6 +57,16 @@ export function ChapterAudioPlayer({
   const recordedRef = useRef<number | null>(null);
   const intentRef = useRef<boolean>(false);
 
+  // Expose playing state globally so the auth layer can keep the session alive
+  // while audio is playing (and skip auto-logout on transient 401s).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    (window as any).__bibleAudioPlaying = playing;
+    return () => {
+      (window as any).__bibleAudioPlaying = false;
+    };
+  }, [playing]);
+
   // Initialize intent from storage once on mount only; do NOT auto-play on first chapter load.
   useEffect(() => {
     intentRef.current = readIntent();
